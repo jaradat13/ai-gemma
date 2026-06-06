@@ -1,0 +1,93 @@
+# ──────────────────────────────────────────────
+#  Local LLM — Configuration File
+#  CLI arguments always override these values.
+# ──────────────────────────────────────────────
+
+model:
+  # Absolute or relative path to your .gguf file
+  path: ~/ai-gemma/models/gemma-4-E2B-it-Q4_K_M.gguf
+
+  # Number of layers to offload to GPU
+  # 99 = full offload (safe for GTX 1050 with this model)
+  gpu_layers: 99
+
+  # Context window size in tokens
+  # Don't exceed 8192 on 4GB VRAM with this model
+  ctx: 8192
+
+  # Flash Attention — speeds up inference, reduces KV cache memory
+  # Confirmed working on Gemma 4 E2B
+  flash_attn: true
+
+inference:
+  # Max tokens the model generates per response
+  max_tokens: 1024
+
+  # Sampling temperature — higher = more creative
+  # Range: 0.0 (deterministic) to 1.0+ (creative)
+  temperature: 0.7
+
+  # Top-p nucleus sampling (0.0 to 1.0)
+  top_p: 0.95
+
+  # Top-k sampling (0 = disabled)
+  top_k: 40
+
+  # Repeat penalty — penalizes repeated tokens
+  repeat_penalty: 1.1
+
+  # Batch size for prompt evaluation
+  n_batch: 512
+
+session:
+  # Default system prompt
+  system_prompt: "You are a helpful assistant."
+
+  # Show llama.cpp verbose/debug output
+  verbose: false
+
+  # Auto-save conversation on exit (set path or leave null)
+  auto_save: null
+  # auto_save: ~/chats/session.txt
+
+web:
+  # Host to bind the web server to
+  # Use 0.0.0.0 to expose on local network
+  host: "127.0.0.1"
+
+  # Port to serve on
+  port: 7860
+
+  # Set to true to get a public gradio.live share link
+  share: false
+
+  # Browser theme hues
+  # Options: slate, gray, zinc, neutral, stone, red, orange, amber,
+  #          yellow, lime, green, emerald, teal, cyan, sky, blue,
+  #          indigo, violet, purple, fuchsia, pink, rose
+  theme:
+    primary_hue: "cyan"
+    secondary_hue: "slate"
+
+  # Title shown in browser tab and page header
+  title: "Local LLM"
+
+  # Subtitle shown above the chat
+  description: "Running on your GPU via llama-cpp-python."
+
+  # Allowed file types for attachment upload
+  file_types:
+    - ".txt"
+    - ".py"
+    - ".cpp"
+    - ".h"
+    - ".json"
+    - ".yaml"
+    - ".md"
+    - ".log"
+
+server:
+  # OpenAI-compatible API server (for Continue.dev / VSCode)
+  # Keep this on a different port from the web UI (7860)
+  host: "127.0.0.1"
+  port: 8000

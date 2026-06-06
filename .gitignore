@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Local config and runtime artifacts
+*.log
+chat_log.txt
+
+# Local model files
+models/
+*.gguf
+*.ggml
