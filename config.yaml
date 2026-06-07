@@ -5,7 +5,7 @@
 
 model:
   # Absolute or relative path to your .gguf file
-  path: ~/ai-gemma/models/gemma-4-E2B-it-Q4_K_M.gguf
+  path: models/gemma-4-E2B-it-Q4_K_M.gguf
 
   # Number of layers to offload to GPU
   # 99 = full offload (safe for GTX 1050 with this model)
@@ -25,7 +25,7 @@ inference:
 
   # Sampling temperature — higher = more creative
   # Range: 0.0 (deterministic) to 1.0+ (creative)
-  temperature: 0.7
+  temperature: 0.1
 
   # Top-p nucleus sampling (0.0 to 1.0)
   top_p: 0.95

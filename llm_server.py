@@ -42,7 +42,7 @@ def load_llm(cfg: dict):
     llm = Llama(
         model_path=model_path,
         n_gpu_layers=mc.get("gpu_layers", 99),
-        n_ctx=mc.get("ctx", 8192),
+        n_ctx=mc.get("ctx", 9524),
         n_batch=ic.get("n_batch", 512),
         flash_attn=mc.get("flash_attn", False),
         verbose=sc.get("verbose", False),
