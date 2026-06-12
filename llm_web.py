@@ -56,6 +56,7 @@ llm = Llama(
     logits_all=True if chat_handler else False,
 )
 print("✓ Model loaded.")
+print("start chatting with the model at http://{}:{}/".format(wc.get("host", "localhost"), wc.get("port", 7860)))
 
 SYSTEM_PROMPT = sc.get("system_prompt", "You are a helpful assistant.")
 MODEL_NAME    = Path(model_path).stem
