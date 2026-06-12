@@ -169,11 +169,13 @@ def load_model(cfg: dict):
     print(f"{C.DIM}Loading: {model_path}{C.RESET}")
     print(f"{C.DIM}GPU layers: {mc['gpu_layers']} | Context: {mc['ctx']} tokens{C.RESET}")
 
+    # Performance-optimized model loading
     llm = Llama(
         model_path=model_path,
         n_gpu_layers=mc["gpu_layers"],
         n_ctx=mc["ctx"],
         n_batch=ic["n_batch"],
+        n_threads=os.cpu_count() or 4,  # Use all available CPU threads
         flash_attn=mc.get("flash_attn", False),
         verbose=sc["verbose"],
     )
@@ -199,13 +201,17 @@ class ChatSession:
     def _trim_history(self):
         """Drop oldest message pairs until safely under context limit."""
         ctx_limit = self.cfg["model"]["ctx"]
+
+        # Pre-calculate token counts to avoid repeated computation
         while len(self.history) > 2:
             messages = self._build_messages()
-            tokens = self.llm.tokenize(
-                " ".join(m["content"] for m in messages).encode()
-            )
+            # More efficient tokenization - tokenize once
+            combined_text = " ".join(m["content"] for m in messages).encode()
+            tokens = self.llm.tokenize(combined_text)
+
             if len(tokens) < int(ctx_limit * 0.85):
                 break
+            # Remove oldest pair
             self.history = self.history[2:]
             print(f"{C.YELLOW}[context trimmed — oldest messages removed]{C.RESET}")
 

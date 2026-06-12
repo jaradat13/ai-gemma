@@ -16,9 +16,32 @@ import time
 import uuid
 import argparse
 from pathlib import Path
-from typing import Iterator
+from typing import Iterator, Optional, Dict, Any
+from functools import lru_cache
 
 from llm_cli import load_config, DEFAULT_CONFIG
+
+# ── Response Cache ─────────────────────────────────────────────────────────────
+class ResponseCache:
+    """Simple LRU cache for repeated prompts."""
+    def __init__(self, max_size: int = 100):
+        self.cache: Dict[str, Any] = {}
+        self.max_size = max_size
+
+    def get(self, key: str) -> Optional[str]:
+        return self.cache.get(key)
+
+    def set(self, key: str, value: str):
+        if len(self.cache) >= self.max_size:
+            # Remove oldest entry
+            oldest = next(iter(self.cache))
+            del self.cache[oldest]
+        self.cache[key] = value
+
+    def clear(self):
+        self.cache.clear()
+
+response_cache = ResponseCache(max_size=50)
 
 # ── Load model ─────────────────────────────────────────────────────────────────
 def load_llm(cfg: dict):
@@ -39,11 +62,14 @@ def load_llm(cfg: dict):
         sys.exit(1)
 
     print(f"Loading {model_path}...")
+
+    # Performance-optimized model loading
     llm = Llama(
         model_path=model_path,
         n_gpu_layers=mc.get("gpu_layers", 99),
         n_ctx=mc.get("ctx", 9524),
         n_batch=ic.get("n_batch", 512),
+        n_threads=os.cpu_count() or 4,  # Use all available CPU threads
         flash_attn=mc.get("flash_attn", False),
         verbose=sc.get("verbose", False),
     )
@@ -94,6 +120,15 @@ def create_server(llm, model_path: str, cfg: dict):
         req_id = f"chatcmpl-{uuid.uuid4().hex[:8]}"
         created = int(time.time())
 
+        # Generate cache key for non-streaming requests with default params
+        cache_key = None
+        if not stream and temperature == 0:
+            cache_key = json.dumps(messages, sort_keys=True)
+            cached_response = response_cache.get(cache_key)
+            if cached_response:
+                # Return cached response immediately
+                return json.loads(cached_response)
+
         def generate() -> Iterator[str]:
             output = llm.create_chat_completion(
                 messages=messages,
@@ -139,7 +174,7 @@ def create_server(llm, model_path: str, cfg: dict):
             content = chunk["choices"][0].get("delta", {}).get("content", "")
             full_text += content
 
-        return {
+        response_data = {
             "id":      req_id,
             "object":  "chat.completion",
             "created": created,
@@ -151,6 +186,12 @@ def create_server(llm, model_path: str, cfg: dict):
             }],
             "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
         }
+
+        # Cache the response if cacheable
+        if cache_key:
+            response_cache.set(cache_key, json.dumps(response_data))
+
+        return response_data
 
     return app
 

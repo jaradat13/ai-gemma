@@ -50,6 +50,7 @@ llm = Llama(
     n_gpu_layers=mc["gpu_layers"],
     n_ctx=mc["ctx"],
     n_batch=ic["n_batch"],
+    n_threads=os.cpu_count() or 4,  # Use all available CPU threads
     flash_attn=mc.get("flash_attn", False),
     verbose=sc["verbose"],
     logits_all=True if chat_handler else False,
@@ -86,12 +87,23 @@ def _strip_images(messages: list[dict]) -> list[dict]:
     return cleaned
 
 def _trim_history(history: list[dict], new_message_chars: int) -> tuple[list[dict], int]:
+    """Efficiently trim history to fit within context budget."""
     fixed   = len(SYSTEM_PROMPT) + new_message_chars
     trimmed = list(history)
+
+    # Pre-calculate content lengths to avoid repeated computation
+    content_lengths = [_content_chars(m["content"]) for m in trimmed]
+    total_history_chars = sum(content_lengths)
+
     while trimmed:
-        if fixed + sum(_content_chars(m["content"]) for m in trimmed) <= CTX_BUDGET:
+        if fixed + total_history_chars <= CTX_BUDGET:
             break
+        # Remove oldest message pair (user + assistant)
+        removed_chars = content_lengths[0] + (content_lengths[1] if len(content_lengths) > 1 else 0)
         trimmed = trimmed[2:] if len(trimmed) >= 2 else trimmed[1:]
+        content_lengths = content_lengths[2:] if len(content_lengths) >= 2 else content_lengths[1:]
+        total_history_chars -= removed_chars
+
     return trimmed, len(history) - len(trimmed)
 
 def stream_response(history: list[dict], user_message: str, image_b64: str | None, image_mime: str):
